@@ -63,7 +63,6 @@ export class Viewer extends EventEmitter {
      * @protected
      * @property {boolean} ready - when all components are loaded
      * @property {boolean} needsUpdate - if the view needs to be renderer
-     * @property {boolean} isCubemap - if the panorama is a cubemap
      * @property {PSV.Position} position - current direction of the camera
      * @property {external:THREE.Vector3} direction - direction of the camera
      * @property {number} zoomLvl - current zoom level
@@ -83,7 +82,6 @@ export class Viewer extends EventEmitter {
       uiRefresh       : false,
       needsUpdate     : false,
       fullscreen      : false,
-      isCubemap       : undefined,
       position        : {
         longitude: 0,
         latitude : 0,
@@ -135,6 +133,14 @@ export class Viewer extends EventEmitter {
     this.container = document.createElement('div');
     this.container.classList.add('psv-container');
     this.parent.appendChild(this.container);
+
+    /**
+     * @summary Render adapter
+     * @type {PSV.adapters.AbstractAdapter}
+     * @readonly
+     * @package
+     */
+    this.adapter = new this.config.adapter[0](this, this.config.adapter[1]); // eslint-disable-line new-cap
 
     /**
      * @summary All child components
@@ -435,10 +441,10 @@ export class Viewer extends EventEmitter {
 
     // apply default parameters on first load
     if (!this.prop.ready) {
-      if (!('longitude' in options) && !this.prop.isCubemap) {
+      if (!('longitude' in options)) {
         options.longitude = this.config.defaultLong;
       }
-      if (!('latitude' in options) && !this.prop.isCubemap) {
+      if (!('latitude' in options)) {
         options.latitude = this.config.defaultLat;
       }
       if (!('zoom' in options)) {
@@ -497,10 +503,11 @@ export class Viewer extends EventEmitter {
         this.loader.show();
       }
 
-      this.prop.loadingPromise = this.textureLoader.loadTexture(this.config.panorama, options.panoData)
+      this.prop.loadingPromise = this.adapter.loadTexture(this.config.panorama, options.panoData)
         .then((textureData) => {
           this.renderer.setTexture(textureData);
-          this.renderer.setSphereCorrection(textureData.panoData, options.sphereCorrection);
+          // TODO
+          // this.renderer.setSphereCorrection(textureData.panoData, options.sphereCorrection);
 
           if (zoomProvided) {
             this.zoom(options.zoom);
@@ -516,7 +523,7 @@ export class Viewer extends EventEmitter {
         this.loader.show();
       }
 
-      this.prop.loadingPromise = this.textureLoader.loadTexture(this.config.panorama, options.panoData)
+      this.prop.loadingPromise = this.adapter.loadTexture(this.config.panorama, options.panoData)
         .then((textureData) => {
           this.loader.hide();
 
